@@ -2,16 +2,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { OceanState } from "../types";
 
-// Sécurité pour éviter le ReferenceError: process is not defined dans le navigateur
-const getApiKey = () => {
+// Méthode de récupération de clé compatible avec tous les environnements sans planter
+const safeGetApiKey = (): string => {
   try {
-    return process.env.API_KEY || "";
+    // Vérification de l'existence de process pour éviter le ReferenceError
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
   } catch (e) {
-    return "";
+    console.warn("Environnement process inaccessible");
   }
+  return "";
 };
 
-const apiKey = getApiKey();
+const apiKey = safeGetApiKey();
 
 export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: string; author: string }> {
   const statePrompts = {
@@ -20,7 +24,7 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
     CLEAR: "limpide, lumineuse, pleine de vie"
   };
 
-  // Si pas de clé API, on retourne directement le fallback sans tenter l'appel
+  // Fallback immédiat si pas de clé pour éviter tout appel inutile
   if (!apiKey) {
     return {
       text: "La mer est un miroir où l'âme cherche son reflet.",
@@ -48,7 +52,7 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
 
     return JSON.parse(response.text.trim());
   } catch (error) {
-    console.error("Error fetching sea wisdom:", error);
+    console.error("Gemini Error:", error);
     return {
       text: "Le silence de l'océan est une langue que peu comprennent.",
       author: "Anonyme"
