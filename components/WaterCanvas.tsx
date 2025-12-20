@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
-import { OceanState, ColorRGB, CreatureData, BaitId, ZoneId } from '../types';
+import { OceanState, ColorRGB, CreatureData, BaitId, ZoneId } from '../types.ts';
 
 interface WaterCanvasProps {
   state: OceanState;
@@ -12,15 +12,12 @@ interface WaterCanvasProps {
 }
 
 export const CREATURE_SPECS: CreatureData[] = [
-  // ZONE: SURFACE
   { name: "Anémone de mer", chance: 0.20, value: 100, color: { r: 255, g: 120, b: 180 }, baseSize: 4, widthRatio: 1, speed: 0.15, zone: 'SURFACE' },
   { name: "Étoile de mer", chance: 0.18, value: 150, color: { r: 255, g: 200, b: 80 }, baseSize: 3, widthRatio: 1, speed: 0.2, zone: 'SURFACE' },
   { name: "Méduse lune", chance: 0.12, value: 250, color: { r: 200, g: 230, b: 255 }, baseSize: 6, widthRatio: 1.1, speed: 0.25, zone: 'SURFACE' },
   { name: "Limace de mer", chance: 0.10, value: 300, color: { r: 100, g: 150, b: 255 }, baseSize: 3, widthRatio: 1.5, speed: 0.3, zone: 'SURFACE' },
   { name: "Poulpe", chance: 0.05, value: 1200, color: { r: 180, g: 130, b: 220 }, baseSize: 5, widthRatio: 1.5, speed: 0.6, zone: 'SURFACE' },
   { name: "Homard", chance: 0.01, value: 4500, color: { r: 220, g: 70, b: 70 }, baseSize: 6, widthRatio: 2, speed: 0.7, zone: 'SURFACE' },
-  
-  // ZONE: FOSSE DE DIAMANT (DIAMOND_PIT)
   { name: "Kraken Spectral", chance: 0.005, value: 25000, color: { r: 130, g: 255, b: 255 }, baseSize: 15, widthRatio: 1.5, speed: 0.2, zone: 'DIAMOND_PIT' },
   { name: "Léviathan Juvénile", chance: 0.01, value: 15000, color: { r: 50, g: 100, b: 255 }, baseSize: 20, widthRatio: 3.5, speed: 0.8, zone: 'DIAMOND_PIT' },
   { name: "Hippocampe Cristal", chance: 0.05, value: 5000, color: { r: 200, g: 240, b: 255 }, baseSize: 6, widthRatio: 0.8, speed: 0.6, zone: 'DIAMOND_PIT' },
@@ -69,10 +66,10 @@ const WaterCanvas: React.FC<WaterCanvasProps> = ({ state, currentZone, equippedB
     if (currentZone === 'ABYSSAL_VOID') return { id: 777, spec: BOSS_SPEC, x: w / 2, y: h / 2, angle: 0, phase: 0 };
     const zoneCreatures = CREATURE_SPECS.filter(s => s.zone === currentZone);
     const weights = zoneCreatures.map(spec => {
-      let w = spec.chance;
-      if (equippedBait === 'DELUXE') w *= 1.5;
-      if (equippedBait === 'VOID_ESSENCE' && spec.chance < 0.01) w *= 5;
-      return w;
+      let weight = spec.chance;
+      if (equippedBait === 'DELUXE') weight *= 1.5;
+      if (equippedBait === 'VOID_ESSENCE' && spec.chance < 0.01) weight *= 5;
+      return weight;
     });
     const totalWeight = weights.reduce((acc, curr) => acc + curr, 0);
     let random = Math.random() * totalWeight;
@@ -89,9 +86,18 @@ const WaterCanvas: React.FC<WaterCanvasProps> = ({ state, currentZone, equippedB
     if (!canvas) return;
     const width = Math.floor(window.innerWidth / 2);
     const height = Math.floor(window.innerHeight / 2);
+    
+    if (width === 0 || height === 0) return;
+
     canvas.width = width;
     canvas.height = height;
-    rippleRef.current = { width, height, size: width * height, buffer1: new Int16Array(width * height), buffer2: new Int16Array(width * height) };
+    rippleRef.current = { 
+      width, 
+      height, 
+      size: width * height, 
+      buffer1: new Int16Array(width * height), 
+      buffer2: new Int16Array(width * height) 
+    };
   }, []);
 
   const createRipple = useCallback((x: number, y: number, str: number) => {
@@ -193,12 +199,14 @@ const WaterCanvas: React.FC<WaterCanvasProps> = ({ state, currentZone, equippedB
 
     const loop = () => {
       frameRef.current++;
-      const imgData = ctx.createImageData(canvas.width, canvas.height);
-      update();
-      draw(imgData);
+      if (canvas.width > 0 && canvas.height > 0) {
+        const imgData = ctx.createImageData(canvas.width, canvas.height);
+        update();
+        draw(imgData);
+      }
       animId = requestAnimationFrame(loop);
     };
-    loop();
+    animId = requestAnimationFrame(loop);
 
     const handleInput = (x: number, y: number, isAction: boolean) => {
       createRipple(x, y, isAction ? config.strength * 2 : config.strength / 2);

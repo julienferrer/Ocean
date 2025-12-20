@@ -3,8 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { OceanState } from "../types.ts";
 
 /**
- * Service generating poetic ocean-themed quotes using Gemini AI.
- * Adheres to @google/genai best practices for initialization and response handling.
+ * Service générant des citations poétiques.
+ * Utilise une vérification de type pour process afin d'éviter les ReferenceError sur Vercel.
  */
 export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: string; author: string }> {
   const statePrompts = {
@@ -14,8 +14,14 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
   };
 
   try {
-    // Initialize AI directly within the function using process.env.API_KEY as per guidelines
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Récupération sécurisée de la clé API
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    
+    if (!apiKey) {
+      throw new Error("Clé API manquante");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Donne-moi une citation courte, poétique et mystérieuse sur une mer ${statePrompts[state]} en français. Format JSON avec 'text' et 'author'.`,
@@ -26,11 +32,11 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
           properties: {
             text: {
               type: Type.STRING,
-              description: "The poetic quote text.",
+              description: "Le texte de la citation.",
             },
             author: {
               type: Type.STRING,
-              description: "The author of the quote.",
+              description: "L'auteur.",
             }
           },
           required: ["text", "author"]
@@ -38,13 +44,12 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
       }
     });
 
-    // Directly access the .text property of GenerateContentResponse
     const output = response.text;
-    if (!output) throw new Error("Empty AI response");
+    if (!output) throw new Error("Réponse IA vide");
     
     return JSON.parse(output.trim());
   } catch (error) {
-    console.warn("Wisdom AI currently unavailable:", error);
+    console.warn("Service de sagesse indisponible (Vérifiez la clé API dans Vercel) :", error);
     return {
       text: "Le silence de l'océan est une langue que peu comprennent.",
       author: "Anonyme"
