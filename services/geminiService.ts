@@ -1,22 +1,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { OceanState } from "../types";
+import { OceanState } from "../types.ts";
 
-// Méthode de récupération de clé compatible avec tous les environnements sans planter
-const safeGetApiKey = (): string => {
-  try {
-    // Vérification de l'existence de process pour éviter le ReferenceError
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    console.warn("Environnement process inaccessible");
-  }
-  return "";
-};
-
-const apiKey = safeGetApiKey();
-
+/**
+ * Service generating poetic ocean-themed quotes using Gemini AI.
+ * Adheres to @google/genai best practices for initialization and response handling.
+ */
 export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: string; author: string }> {
   const statePrompts = {
     CALM: "calme, paisible, sereine",
@@ -24,16 +13,9 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
     CLEAR: "limpide, lumineuse, pleine de vie"
   };
 
-  // Fallback immédiat si pas de clé pour éviter tout appel inutile
-  if (!apiKey) {
-    return {
-      text: "La mer est un miroir où l'âme cherche son reflet.",
-      author: "Légende Marine"
-    };
-  }
-
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    // Initialize AI directly within the function using process.env.API_KEY as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Donne-moi une citation courte, poétique et mystérieuse sur une mer ${statePrompts[state]} en français. Format JSON avec 'text' et 'author'.`,
@@ -42,17 +24,27 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            text: { type: Type.STRING },
-            author: { type: Type.STRING }
+            text: {
+              type: Type.STRING,
+              description: "The poetic quote text.",
+            },
+            author: {
+              type: Type.STRING,
+              description: "The author of the quote.",
+            }
           },
           required: ["text", "author"]
         }
       }
     });
 
-    return JSON.parse(response.text.trim());
+    // Directly access the .text property of GenerateContentResponse
+    const output = response.text;
+    if (!output) throw new Error("Empty AI response");
+    
+    return JSON.parse(output.trim());
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.warn("Wisdom AI currently unavailable:", error);
     return {
       text: "Le silence de l'océan est une langue que peu comprennent.",
       author: "Anonyme"
