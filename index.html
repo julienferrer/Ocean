@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #05193c; /* Fond bleu océan par défaut au lieu de noir */
+            background-color: #05193c;
         }
         #root {
             height: 100vh;
@@ -34,5 +34,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- Point d'entrée explicite pour garantir le chargement sur Vercel -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

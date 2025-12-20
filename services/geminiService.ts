@@ -3,8 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { OceanState } from "../types.ts";
 
 /**
- * Service générant des citations poétiques.
- * Utilise une vérification de type pour process afin d'éviter les ReferenceError sur Vercel.
+ * Service générant des citations poétiques via Gemini.
+ * Accès sécurisé à la clé API pour le navigateur.
  */
 export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: string; author: string }> {
   const statePrompts = {
@@ -14,11 +14,21 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
   };
 
   try {
-    // Récupération sécurisée de la clé API
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    // Vérification sécurisée de l'existence de la clé API
+    let apiKey = "";
+    try {
+      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        apiKey = process.env.API_KEY;
+      }
+    } catch (e) {
+      console.warn("L'objet process n'est pas accessible.");
+    }
     
     if (!apiKey) {
-      throw new Error("Clé API manquante");
+      return {
+        text: "La mer est un miroir où l'âme cherche son reflet.",
+        author: "Légende Marine"
+      };
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -30,14 +40,8 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            text: {
-              type: Type.STRING,
-              description: "Le texte de la citation.",
-            },
-            author: {
-              type: Type.STRING,
-              description: "L'auteur.",
-            }
+            text: { type: Type.STRING },
+            author: { type: Type.STRING }
           },
           required: ["text", "author"]
         }
@@ -45,11 +49,9 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
     });
 
     const output = response.text;
-    if (!output) throw new Error("Réponse IA vide");
-    
-    return JSON.parse(output.trim());
+    return output ? JSON.parse(output.trim()) : { text: "Silence de l'abysse...", author: "Océan" };
   } catch (error) {
-    console.warn("Service de sagesse indisponible (Vérifiez la clé API dans Vercel) :", error);
+    console.error("Gemini Wisdom error:", error);
     return {
       text: "Le silence de l'océan est une langue que peu comprennent.",
       author: "Anonyme"
