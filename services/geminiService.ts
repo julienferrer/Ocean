@@ -3,8 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { OceanState } from "../types.ts";
 
 /**
- * Service générant des citations poétiques via Gemini.
- * Accès sécurisé à la clé API pour le navigateur.
+ * Service de génération de sagesse marine.
+ * Sécurisé pour l'exécution dans le navigateur sans 'process' global.
  */
 export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: string; author: string }> {
   const statePrompts = {
@@ -14,19 +14,19 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
   };
 
   try {
-    // Vérification sécurisée de l'existence de la clé API
+    // Tentative d'accès sécurisé à la clé API
     let apiKey = "";
     try {
-      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-        apiKey = process.env.API_KEY;
-      }
+      // @ts-ignore
+      const env = (typeof process !== 'undefined' && process.env) || (globalThis as any).process?.env || {};
+      apiKey = env.API_KEY || "";
     } catch (e) {
-      console.warn("L'objet process n'est pas accessible.");
+      console.warn("Environnement process inaccessible.");
     }
     
     if (!apiKey) {
       return {
-        text: "La mer est un miroir où l'âme cherche son reflet.",
+        text: "L'horizon est une promesse que l'eau fait au ciel.",
         author: "Légende Marine"
       };
     }
@@ -49,7 +49,7 @@ export async function getSeaWisdom(state: OceanState = 'CALM'): Promise<{ text: 
     });
 
     const output = response.text;
-    return output ? JSON.parse(output.trim()) : { text: "Silence de l'abysse...", author: "Océan" };
+    return output ? JSON.parse(output.trim()) : { text: "Le chant des profondeurs...", author: "Océan" };
   } catch (error) {
     console.error("Gemini Wisdom error:", error);
     return {
